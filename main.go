@@ -19,12 +19,23 @@ func main() {
 	r.Use(cors.Default())
 
 	log.Println("Loading .env file")
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
+	env := os.Getenv("SERVER_ENV")
 
-	utils.LoadEnvs()
+	if env == "production" {
+		log.Println("Running in production")
+		gin.SetMode(gin.ReleaseMode)
+
+	} else if env == "development" {
+		log.Println("Running in development")
+	} else {
+		log.Println("No environment set, defaulting to local")
+		log.Println("Loading .env file")
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatalf("Error loading .env file: %v", err)
+		}
+		utils.LoadEnvs()
+	}
 
 	// stripeSecret := os.Getenv("STRIPE_SECRET")
 
