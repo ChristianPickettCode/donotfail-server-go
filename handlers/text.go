@@ -130,7 +130,7 @@ func GenerateAllImageText(c *gin.Context) {
 
 // findSlideImageByID retrieves a single slide image by ID from the database
 func findSlideImageByID(id primitive.ObjectID) (bson.M, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	var slideImage bson.M
@@ -146,7 +146,7 @@ func findSlideImageByID(id primitive.ObjectID) (bson.M, error) {
 
 // findSlideImagesBySlideID retrieves all slide images for a given slide ID from the database
 func findSlideImagesBySlideID(slideID string) ([]bson.M, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 360*time.Second)
 	defer cancel()
 
 	opts := options.Find()
@@ -169,7 +169,7 @@ func findSlideImagesBySlideID(slideID string) ([]bson.M, error) {
 
 // generateContextForSlideImage generates the context string for a slide image based on preceding slides
 func generateContextForSlideImage(slideImage bson.M) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
 
 	slideID := slideImage["slide_id"].(string)
@@ -260,7 +260,7 @@ func callAPI(imageURL string, prompt string) (string, error) {
 
 // updateGeneratedText updates the generated text in the database for a given slide image ID
 func updateGeneratedText(slideImageID string, generatedText string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
 	objID, err := primitive.ObjectIDFromHex(slideImageID)
 	if err != nil {
