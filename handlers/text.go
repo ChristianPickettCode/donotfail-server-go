@@ -146,7 +146,7 @@ func findSlideImageByID(id primitive.ObjectID) (bson.M, error) {
 
 // findSlideImagesBySlideID retrieves all slide images for a given slide ID from the database
 func findSlideImagesBySlideID(slideID string) ([]bson.M, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	opts := options.Find()
@@ -169,7 +169,7 @@ func findSlideImagesBySlideID(slideID string) ([]bson.M, error) {
 
 // generateContextForSlideImage generates the context string for a slide image based on preceding slides
 func generateContextForSlideImage(slideImage bson.M) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	slideID := slideImage["slide_id"].(string)

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -312,4 +313,148 @@ func GenerateAudio2(c *gin.Context) {
 	}
 	log.Println("Slide image updated with audio URL")
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": audioURL, "status_code": http.StatusOK})
+}
+
+// GenerateAllAudioForSlide generates audio files for a given slide ID
+func GenerateAllAudioForSlide(c *gin.Context) {
+	// Get slide ID from request parameters
+	slideID := c.Param("slide_id")
+
+	// Find slide images by slide ID
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
+	defer cancel()
+
+	_, err := primitive.ObjectIDFromHex(slideID)
+	if err != nil {
+		log.Println("Invalid slide ID")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid slide ID"})
+		return
+	}
+
+	slideImagesCursor, err := db.DB.Collection(collectionNameSlideImages).Find(ctx, bson.M{"slide_id": slideID})
+	if err != nil {
+		log.Println("Error finding slide images")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error finding slide images"})
+		return
+	}
+	defer slideImagesCursor.Close(ctx)
+
+	for slideImagesCursor.Next(ctx) {
+		var slideImage bson.M
+		err := slideImagesCursor.Decode(&slideImage)
+		if err != nil {
+			log.Println("Error decoding slide image")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding slide image"})
+			return
+		}
+
+		order := slideImage["order"].(int32)
+		log.Printf("Generating audio for slide image with order %d", order)
+
+		// Check if audio URL already exists
+		audioURL, ok := slideImage["audio_url"].(string)
+		if ok && audioURL != "" {
+			log.Println("Audio URL already exists")
+			continue
+		}
+
+		// Generate audio for slide image
+		err = GenerateAudioForSlideImage(ctx, slideImage)
+		if err != nil {
+			log.Println("Error generating audio for slide image")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating audio for slide image"})
+			return
+		}
+	}
+
+	log.Println("Audio generated for all slide images")
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Audio generated for all slide images"})
+}
+
+// GenerateAudioForSlideImage generates audio file for a given slide image
+func GenerateAudioForSlideImage(ctx context.Context, slideImage bson.M) error {
+	// Get generated text
+	generatedText, ok := slideImage["generated_text"].(string)
+	if !ok {
+		log.Println("Generated text not found")
+		return errors.New("generated text not found")
+	}
+
+	// Generate audio file
+	log.Println("Generating audio file")
+	voice := "alloy"
+	url := "https://api.openai.com/v1/audio/speech"
+	headers := map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": fmt.Sprintf("Bearer %s", utils.OPENAI_API_KEY),
+	}
+	data := map[string]interface{}{
+		"model": "tts-1",
+		"input": generatedText,
+		"voice": voice,
+		"speed": 1,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Error preparing request data")
+		return errors.New("error preparing request data")
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Println("Error creating request")
+		return errors.New("error creating request")
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	client := &http.Client{}
+	response, err := client.Do(req)
+	if err != nil {
+		log.Println("Error sending request")
+		return errors.New("error sending request")
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(response.Body)
+		log.Println("Error generating audio file")
+		return fmt.Errorf("error generating audio file: %s", string(body))
+	}
+	log.Println("Audio file generated")
+	// Read audio content
+	audioBlob, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Println("Error reading audio response")
+		return errors.New("error reading audio response")
+	}
+	log.Println("Audio generated")
+	// Upload audio to S3
+	fileName := generateFileName()
+	awsPath := fmt.Sprintf("slides/%s/audio/%s.mp3", slideImage["slide_id"].(string), fileName)
+	s3session := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(utils.AWS_REGION),
+	}))
+	uploader := s3.New(s3session)
+	_, err = uploader.PutObject(&s3.PutObjectInput{
+		Bucket:      aws.String(utils.AWS_BUCKET_NAME),
+		Key:         aws.String(awsPath),
+		Body:        bytes.NewReader(audioBlob),
+		ContentType: aws.String("audio/mpeg"),
+	})
+	if err != nil {
+		log.Println("Error uploading audio to S3")
+		return errors.New("error uploading audio to S3")
+	}
+	log.Println("Audio uploaded to S3")
+	// Generate audio URL
+	audioURL := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", utils.AWS_BUCKET_NAME, awsPath)
+	log.Println("Audio URL:", audioURL)
+	// Update slide image with audio URL
+	_, err = db.DB.Collection(collectionNameSlideImages).UpdateOne(ctx, bson.M{"_id": slideImage["_id"]}, bson.M{"$set": bson.M{"audio_url": audioURL}})
+	if err != nil {
+		log.Println("Error updating slide image", err)
+		return errors.New("error updating slide image")
+	}
+
+	log.Println("Slide image updated with audio URL")
+	return nil
 }

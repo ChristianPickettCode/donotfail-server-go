@@ -61,4 +61,7 @@ func SetUpRoutes(r *gin.Engine) {
 	// generate notes
 	r.POST("/generate-notes/:slide_id", GenerateNotes)
 
+	// generate all audio
+	r.POST("/generate-all-audio/:slide_id", GenerateAllAudioForSlide)
+
 }
