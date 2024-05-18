@@ -43,7 +43,7 @@ func GenerateAudio(c *gin.Context) {
 	slideImageID := request.SlideImageID
 	log.Printf("Slide Image ID: %s", slideImageID)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	objID, err := primitive.ObjectIDFromHex(slideImageID)
@@ -171,7 +171,7 @@ func GenerateAudio(c *gin.Context) {
 		return
 	}
 
-	log.Println("Slide image updated with audio URL")
+	log.Println("Slide image updated with audio URL", audioURL)
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": audioURL, "status_code": http.StatusOK})
 }
@@ -194,7 +194,7 @@ func GenerateAudio2(c *gin.Context) {
 	// Get slide image ID
 	slideImageID := request.SlideImageID
 	log.Printf("Slide Image ID: %s", slideImageID)
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	objID, err := primitive.ObjectIDFromHex(slideImageID)
 	if err != nil {
