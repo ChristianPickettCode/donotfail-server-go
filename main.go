@@ -34,8 +34,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error loading .env file: %v", err)
 		}
-		utils.LoadEnvs()
+
 	}
+
+	utils.LoadEnvs()
 
 	// stripeSecret := os.Getenv("STRIPE_SECRET")
 
