@@ -64,4 +64,16 @@ func SetUpRoutes(r *gin.Engine) {
 	// generate all audio
 	r.POST("/generate-all-audio/:slide_id", GenerateAllAudioForSlide)
 
+	// generate quiz
+	r.POST("/generate-quiz/:slide_id", GenerateQuizQuestions)
+
+	// GetSlidesWithQuizQuestions
+	r.GET("/slides-with-quiz-questions", GetSlidesWithQuizQuestions)
+
+	// Get all quiz questions for a slide
+	r.GET("/quiz-questions/:slide_id", GetQuizQuestions)
+
+	// Delete quiz question by quiz id
+	r.DELETE("/quiz-question/:quiz_id", DeleteQuizQuestion)
+
 }

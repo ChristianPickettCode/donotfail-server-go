@@ -51,3 +51,12 @@ type SearchRequest struct {
 	Context  string `json:"context"`
 	Question string `json:"question" binding:"required"`
 }
+
+type QuizQA struct {
+	ID            primitive.ObjectID `bson:"_id" json:"id"`
+	Question      string             `bson:"question" json:"question"`
+	AnswerChoices []string           `bson:"answer_choices" json:"answer_choices"`
+	Answer        string             `bson:"answer" json:"answer"`
+	SlideID       string             `bson:"slide_id" json:"slide_id"`
+	SlideImageID  string             `bson:"slide_image_id" json:"slide_image_id"`
+}
