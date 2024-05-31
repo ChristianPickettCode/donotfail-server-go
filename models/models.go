@@ -45,6 +45,7 @@ type AudioRequest struct {
 	SlideImageID string    `bson:"slide_image_id" json:"slide_image_id"`
 	CreatedAt    time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt    time.Time `bson:"updated_at" json:"updated_at"`
+	Update       bool      `bson:"update" json:"update"`
 }
 
 type SearchRequest struct {

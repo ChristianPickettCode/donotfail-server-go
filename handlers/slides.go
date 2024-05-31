@@ -100,7 +100,7 @@ func CreateSlide(c *gin.Context) {
 
 	log.Println("Create created:", result.InsertedID)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, gin.H{"message": "Slide created successfully", "status_code": 200, "result": result})
 }
 
 // UpdateSlide
@@ -158,7 +158,7 @@ func UpdateSlide(c *gin.Context) {
 
 	log.Println("Update result:", result)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, gin.H{"message": "Slide updated successfully", "status_code": 200, "result": result})
 }
 
 // deleteAWSFile deletes a file from AWS S3 given its key

@@ -206,10 +206,12 @@ func generateContextForSlideImage(slideImage bson.M) (string, error) {
 // processImage calls the API to process the image and generate text
 func processImage(imageURL string, contextStr string) (string, error) {
 	PROMPT := `
+	
 	You are a professor, describe and explain this lecture slide, no fluff, buzzwords or jargon. Use the context(previous slides) provided to give a clear and concise explanation of this current slide.
-	Do not start explanation with this slide, or the slide, or the title, just start explaining the slide. Provide the response in MARKDOWN format.
+	Do not start explanation with 'this slide', or 'the slide', or 'the title', or 'the presentation', 'Today's lecture' or statements like those, just start explaining the slide.
+	Don't make up information, only use the information provided in the slide and expand if necessary for clarity and understanding. Make the transitions between slides smooth and coherent as if you were giving a lecture. Do not use the words 'delve', or 'slide'. Start the explanation as if you were continuing from the previous slide.  Bold the keywords and key phrases in your explanation. 
 	`
-	PROMPT += contextStr
+	PROMPT = contextStr + PROMPT
 	fmt.Println("PROMPT: ", PROMPT)
 	return callAPI(imageURL, PROMPT)
 }

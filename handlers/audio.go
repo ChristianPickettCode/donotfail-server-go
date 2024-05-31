@@ -78,7 +78,7 @@ func GenerateAudio(c *gin.Context) {
 
 	// Check if audio URL already exists
 	audioURL, ok := slideImage["audio_url"].(string)
-	if ok && audioURL != "" {
+	if ok && audioURL != "" && !request.Update {
 		log.Println("Audio URL already exists")
 		c.JSON(http.StatusOK, gin.H{"status": "success", "data": audioURL, "status_code": http.StatusOK})
 		return
@@ -225,7 +225,7 @@ func GenerateAudio2(c *gin.Context) {
 	}
 	// Check if audio URL already exists
 	audioURL, ok := slideImage["audio_url"].(string)
-	if ok && audioURL != "" {
+	if ok && audioURL != "" && !request.Update {
 		log.Println("Audio URL already exists")
 		c.JSON(http.StatusOK, gin.H{"status": "success", "data": audioURL, "status_code": http.StatusOK})
 		return
