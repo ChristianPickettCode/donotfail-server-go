@@ -207,7 +207,7 @@ func generateContextForSlideImage(slideImage bson.M) (string, error) {
 func processImage(imageURL string, contextStr string) (string, error) {
 	PROMPT := `
 	You are a professor, describe and explain this lecture slide, no fluff, buzzwords or jargon. Use the context(previous slides) provided to give a clear and concise explanation of this current slide.
-	Do not start explanation with this slide, or the slide, or the title, just start explaining the slide.
+	Do not start explanation with this slide, or the slide, or the title, just start explaining the slide. Provide the response in MARKDOWN format.
 	`
 	PROMPT += contextStr
 	fmt.Println("PROMPT: ", PROMPT)
