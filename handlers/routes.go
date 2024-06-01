@@ -39,7 +39,7 @@ func SetUpRoutes(r *gin.Engine) {
 
 	// generate audio routes
 	// Generate audio for a slide
-	r.POST("/generate-audio", GenerateAudio2)
+	r.GET("/generate-audio/:slide_image_id", GenerateAudio2)
 
 	// generate text routes
 	// Generate text for a slide image

@@ -277,13 +277,6 @@ func updateGeneratedText(slideImageID string, generatedText string) bool {
 	return true
 }
 
-// GenerateNotes - This function generates notes for the slide using the generated text
-// We can specify the number of slides to use for generating notes
-// The generated notes are saved in the database
-// ex. we can specify that we want to be using every 5 slides images (generated text)
-// to send to open ai to generate notes for then we append the repsonse to the generated notes array
-// for the slide
-// MAKE SURE TO USE OPEN AI
 func GenerateNotes(c *gin.Context) {
 	slideID := c.Param("slide_id")
 	log.Println("*** /generate-notes ***")
