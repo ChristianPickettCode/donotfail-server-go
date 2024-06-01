@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"main/db"
@@ -17,7 +18,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// GenerateText is a gin handler to generate text for a single slide image
 func GenerateText(c *gin.Context) {
 	slideImageID := c.Param("slide_image_id")
 	fmt.Println("*** /generate-image-text ***")
@@ -50,33 +50,41 @@ func GenerateText(c *gin.Context) {
 		return
 	}
 
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Flush()
+
+	sendSSE := func(message string) {
+		fmt.Fprintf(c.Writer, "data: %s\n\n", message)
+		c.Writer.Flush()
+	}
+
+	sendSSE("Processing image to generate text")
+
 	response, err := processImage(imageURL, contextStr)
 	if err != nil {
 		log.Println("Error processing image", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		sendSSE("Error processing image")
 		return
 	}
+
+	sendSSE("Updating generated text in the database")
 
 	if !updateGeneratedText(slideImageID, response) {
 		log.Println("Error updating slide image")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating slide image"})
+		sendSSE("Error updating slide image")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": response})
+	finalResponse, _ := json.Marshal(gin.H{"status": "success", "data": response})
+	fmt.Fprintf(c.Writer, "data: %s\n\n", finalResponse)
+	c.Writer.Flush()
 }
 
-// GenerateAllImageText is a gin handler to generate text for all slide images
 func GenerateAllImageText(c *gin.Context) {
 	slideID := c.Param("slide_id")
 	log.Println("*** /generate-all-image-text ***")
-
-	// objID, err := primitive.ObjectIDFromHex(slideID)
-	// if err != nil {
-	// 	log.Println("Invalid slide ID", err)
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid slide ID"})
-	// 	return
-	// }
 
 	log.Println("Slide ID:", slideID)
 
@@ -87,15 +95,26 @@ func GenerateAllImageText(c *gin.Context) {
 		return
 	}
 
-	log.Println("Slide Images:", slideImages)
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Flush()
+
+	sendSSE := func(message string) {
+		fmt.Fprintf(c.Writer, "data: %s\n\n", message)
+		c.Writer.Flush()
+	}
+
+	totalImages := len(slideImages)
+	sendSSE(fmt.Sprintf(`{"totalImages": %d}`, totalImages))
 
 	var slideImagesList []bson.M
 	for _, slideImage := range slideImages {
 		imageURL, ok := slideImage["image_url"].(string)
 		if !ok || imageURL == "" {
 			log.Println("Image URL not found")
-			c.JSON(http.StatusNotFound, gin.H{"error": "Image URL not found"})
-			return
+			sendSSE("Image URL not found")
+			continue
 		}
 
 		generatedText, _ := slideImage["generated_text"].(string)
@@ -103,29 +122,35 @@ func GenerateAllImageText(c *gin.Context) {
 			contextStr, err := generateContextForSlideImage(slideImage)
 			if err != nil {
 				log.Println("Error generating context", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
+				sendSSE("Error generating context")
+				continue
 			}
+
+			sendSSE(fmt.Sprintf("Processing image for slide order %d", slideImage["order"].(int32)))
 
 			response, err := processImage(imageURL, contextStr)
 			if err != nil {
 				log.Println("Error processing image", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
+				sendSSE(fmt.Sprintf("Error processing image for slide order %d", slideImage["order"].(int32)))
+				continue
 			}
 
 			if !updateGeneratedText(slideImage["_id"].(primitive.ObjectID).Hex(), response) {
 				log.Println("Error updating slide image")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating slide image"})
-				return
+				sendSSE(fmt.Sprintf("Error updating slide image for slide order %d", slideImage["order"].(int32)))
+				continue
 			}
 			slideImage["generated_text"] = response
 		}
 
 		slideImagesList = append(slideImagesList, slideImage)
+		sendSSE(fmt.Sprintf(`{"processedImage": %d}`, slideImage["order"].(int32)))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": slideImagesList})
+	finalResponse, _ := json.Marshal(gin.H{"status": "success", "data": slideImagesList})
+	fmt.Fprintf(c.Writer, "data: %s\n\n", finalResponse)
+	sendSSE("[DONE]")
+	c.Writer.Flush()
 }
 
 // findSlideImageByID retrieves a single slide image by ID from the database

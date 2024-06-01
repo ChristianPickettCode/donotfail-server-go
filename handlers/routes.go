@@ -49,11 +49,8 @@ func SetUpRoutes(r *gin.Engine) {
 	// Convert PDF to images for a slide
 	r.GET("/convert-pdf-to-images/:slide_id", ConvertPDFToImages)
 
-	// test
-	r.GET("/test", Test)
-
 	// generate all image text
-	r.POST("/generate-all-image-text/:slide_id", GenerateAllImageText)
+	r.GET("/generate-all-image-text/:slide_id", GenerateAllImageText)
 
 	// search
 	r.POST("/search", SearchQuestion)
