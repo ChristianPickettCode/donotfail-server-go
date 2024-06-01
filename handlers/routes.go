@@ -47,7 +47,7 @@ func SetUpRoutes(r *gin.Engine) {
 
 	// convert pdf to image routes
 	// Convert PDF to images for a slide
-	r.POST("/convert-pdf-to-images/:slide_id", ConvertPDFToImages)
+	r.GET("/convert-pdf-to-images/:slide_id", ConvertPDFToImages)
 
 	// test
 	r.GET("/test", Test)

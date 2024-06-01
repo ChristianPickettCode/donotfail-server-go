@@ -28,7 +28,7 @@ import (
 func ConvertPDFToImages(c *gin.Context) {
 	slideID := c.Param("slide_id")
 	fmt.Println("*** /convert-pdf-to-images ***")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
 
 	objID, err := primitive.ObjectIDFromHex(slideID)
@@ -61,11 +61,23 @@ func ConvertPDFToImages(c *gin.Context) {
 
 	log.Println("pdfURL", pdfURL)
 
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Flush()
+
+	sendSSE := func(message string) {
+		fmt.Fprintf(c.Writer, "data: %s\n\n", message)
+		c.Writer.Flush()
+	}
+
+	sendSSE("Downloading PDF")
+
 	// Download the PDF
 	response, err := http.Get(pdfURL)
 	if err != nil {
 		log.Println("Error downloading PDF", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error downloading PDF"})
+		sendSSE("Error downloading PDF")
 		return
 	}
 	defer response.Body.Close()
@@ -73,7 +85,7 @@ func ConvertPDFToImages(c *gin.Context) {
 	pdfBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Println("Error reading PDF response", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading PDF response"})
+		sendSSE("Error reading PDF response")
 		return
 	}
 
@@ -81,7 +93,7 @@ func ConvertPDFToImages(c *gin.Context) {
 	tmpDir, err := os.MkdirTemp(".", "fitz")
 	if err != nil {
 		log.Println("Error creating temp directory", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating temp directory"})
+		sendSSE("Error creating temp directory")
 		return
 	}
 	defer os.RemoveAll(tmpDir)
@@ -90,20 +102,21 @@ func ConvertPDFToImages(c *gin.Context) {
 	tempPDFPath := filepath.Join(tmpDir, "document.pdf")
 	if err := ioutil.WriteFile(tempPDFPath, pdfBytes, 0644); err != nil {
 		log.Println("Error writing PDF to file", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error writing PDF to file"})
+		sendSSE("Error writing PDF to file")
 		return
 	}
+
+	sendSSE("Converting PDF to images")
 
 	// Convert PDF to images
 	images, err := pdfToImages(tempPDFPath)
 	if err != nil {
 		log.Println("Error converting PDF to images", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error converting PDF to images"})
+		sendSSE("Error converting PDF to images")
 		return
 	}
 
-	// Save images to the temporary directory and upload them to S3
-	log.Println("Number of images: ", len(images))
+	sendSSE(fmt.Sprintf(`{"totalImages": %d}`, len(images)))
 	index := 0
 	for _, img := range images {
 		fileName := generateFileName()
@@ -111,19 +124,22 @@ func ConvertPDFToImages(c *gin.Context) {
 		err = saveImageToFile(img, imagePath)
 		if err != nil {
 			log.Println("Error saving image to file", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving image to file"})
+			sendSSE("Error saving image to file")
 			return
 		}
+		sendSSE(fmt.Sprintf("Uploading image %d to S3", index+1))
 		err = uploadFileToS3(c, slideID, imagePath, fileName, "image/png", index)
 		if err != nil {
 			log.Println("Error uploading image to S3", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error uploading image to S3"})
+			sendSSE("Error uploading image to S3")
 			return
 		}
+		sendSSE(fmt.Sprintf(`{"processedImage": %d}`, index+1))
 		index++
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "PDF converted to images", "status_code": 200})
+	sendSSE("PDF converted to images successfully")
+	sendSSE("[DONE]") // Indicate the process is done
 }
 
 func pdfToImages(pdfPath string) ([]image.Image, error) {
