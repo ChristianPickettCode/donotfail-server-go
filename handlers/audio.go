@@ -195,7 +195,7 @@ func GenerateAudio2(c *gin.Context) {
 	// Get slide image ID
 	slideImageID := request.SlideImageID
 	log.Printf("Slide Image ID: %s", slideImageID)
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 240*time.Second)
 	defer cancel()
 	objID, err := primitive.ObjectIDFromHex(slideImageID)
 	if err != nil {
@@ -359,7 +359,7 @@ func GenerateAllAudioForSlide(c *gin.Context) {
 		}
 
 		// Generate audio for slide image
-		err = GenerateAudioForSlideImage(ctx, slideImage)
+		err = generateAudioForSlideImage(ctx, slideImage)
 		if err != nil {
 			log.Println("Error generating audio for slide image")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating audio for slide image"})
@@ -372,7 +372,7 @@ func GenerateAllAudioForSlide(c *gin.Context) {
 }
 
 // GenerateAudioForSlideImage generates audio file for a given slide image
-func GenerateAudioForSlideImage(ctx context.Context, slideImage bson.M) error {
+func generateAudioForSlideImage(ctx context.Context, slideImage bson.M) error {
 	// Get generated text
 	generatedText, ok := slideImage["generated_text"].(string)
 	if !ok {
