@@ -195,7 +195,7 @@ func GenerateAudio2(c *gin.Context) {
 	// Get slide image ID
 	slideImageID := request.SlideImageID
 	log.Printf("Slide Image ID: %s", slideImageID)
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 	objID, err := primitive.ObjectIDFromHex(slideImageID)
 	if err != nil {
