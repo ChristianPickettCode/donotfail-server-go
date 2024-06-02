@@ -323,6 +323,10 @@ func GenerateAudio2(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Slide image ID is required"})
 		return
 	}
+	update := c.Query("update")
+	if update == "" {
+		update = "false"
+	}
 
 	log.Println("*** /generate-audio-2 ***")
 	log.Printf("Slide Image ID: %s", slideImageID)
@@ -357,17 +361,23 @@ func GenerateAudio2(c *gin.Context) {
 		return
 	}
 
-	// audioURL, ok := slideImage["audio_url"].(string)
-	// if ok && audioURL != "" {
-	// 	log.Println("Audio URL already exists")
-	// 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": audioURL, "status_code": http.StatusOK})
-	// 	return
-	// }
-
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
 	c.Writer.Flush()
+
+	audioURL, ok := slideImage["audio_url"].(string)
+	if ok && audioURL != "" && update == "false" {
+		log.Println("Audio URL already exists")
+		responseMap := map[string]interface{}{
+			"status":      "success",
+			"data":        audioURL,
+			"status_code": http.StatusOK,
+		}
+		finalResponse, _ := json.Marshal(responseMap)
+		fmt.Fprintf(c.Writer, "data: %s\n\n", string(finalResponse))
+		c.Writer.Flush()
+	}
 
 	sendSSE := func(message string) {
 		fmt.Fprintf(c.Writer, "data: %s\n\n", message)
@@ -440,7 +450,7 @@ func GenerateAudio2(c *gin.Context) {
 	}
 	sendSSE("Audio uploaded to S3")
 
-	audioURL := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", utils.AWS_BUCKET_NAME, awsPath)
+	audioURL = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", utils.AWS_BUCKET_NAME, awsPath)
 	_, err = db.DB.Collection(collectionNameSlideImages).UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"audio_url": audioURL}})
 	if err != nil {
 		sendSSE("Error updating slide image")
