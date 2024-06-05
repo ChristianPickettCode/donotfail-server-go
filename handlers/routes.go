@@ -43,7 +43,7 @@ func SetUpRoutes(r *gin.Engine) {
 
 	// generate text routes
 	// Generate text for a slide image
-	r.POST("/generate-image-text/:slide_image_id", GenerateText)
+	r.GET("/generate-image-text/:slide_image_id", GenerateText)
 
 	// convert pdf to image routes
 	// Convert PDF to images for a slide
