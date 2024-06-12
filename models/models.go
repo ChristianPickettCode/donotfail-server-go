@@ -61,3 +61,15 @@ type QuizQA struct {
 	SlideID       string             `bson:"slide_id" json:"slide_id"`
 	SlideImageID  string             `bson:"slide_image_id" json:"slide_image_id"`
 }
+
+type User struct {
+	ID        primitive.ObjectID `bson:"_id" json:"id"`
+	UserID    string             `bson:"user_id" json:"user_id"`
+	FirstName string             `bson:"first_name" json:"first_name"`
+	LastName  string             `bson:"last_name" json:"last_name"`
+	Email     string             `bson:"email" json:"email"`
+	School    string             `bson:"school" json:"school"`
+	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
+	SpaceIDs  []string           `bson:"space_ids" json:"space_ids"`
+}

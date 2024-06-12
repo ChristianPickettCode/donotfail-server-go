@@ -73,4 +73,21 @@ func SetUpRoutes(r *gin.Engine) {
 	// Delete quiz question by quiz id
 	r.DELETE("/quiz-question/:quiz_id", DeleteQuizQuestion)
 
+	// Users
+	userRoutes := r.Group("/user")
+	{
+		userRoutes.GET("/:user_id", GetUser)
+		userRoutes.POST("/", CreateUser)
+		// userRoutes.PUT("/:id", updateUser)
+		// userRoutes.DELETE("/:id", deleteUser)
+
+		// User spaces
+		userSpaceRoutes := userRoutes.Group("/:user_id/space")
+		{
+			userSpaceRoutes.GET("/", GetUserSpaces)
+			userSpaceRoutes.PUT("/:space_id", AddSpaceToUser)
+			userSpaceRoutes.DELETE("/:space_id", RemoveSpaceFromUser)
+		}
+	}
+
 }
