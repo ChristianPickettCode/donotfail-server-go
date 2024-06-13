@@ -51,7 +51,8 @@ func GenerateQuizQuestions(c *gin.Context) {
 		log.Println("Context length:", len(contextStr))
 		// Every 10 slide images, generate 20 quiz questions
 		if (i+1)%5 == 0 || i+1 == len(slideImages) {
-			questions, err := generateQuizQuestions(contextStr, slideID)
+			slideImageID := slideImage["_id"].(primitive.ObjectID).Hex()
+			questions, err := generateQuizQuestions(contextStr, slideID, slideImageID, 10)
 			if err != nil {
 				log.Println("Error generating quiz questions", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -172,6 +173,33 @@ func GetQuizQuestions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": questions})
 }
 
+// Get all quiz questions for a slide image
+func GetQuizQuestionsForSlideImage(c *gin.Context) {
+	slideID := c.Param("slide_id")
+	slideImageID := c.Param("slide_image_id")
+	log.Println("*** /quiz-questions ***")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 360*time.Second)
+	defer cancel()
+
+	cursor, err := db.DB.Collection("quiz_questions").Find(ctx, bson.M{"slide_id": slideID, "slide_image_id": slideImageID})
+	if err != nil {
+		log.Println("Error finding quiz questions", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var questions []models.QuizQA
+	if err = cursor.All(ctx, &questions); err != nil {
+		log.Println("Error decoding quiz questions", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": questions})
+}
+
 func findSlideByID(slideID string) (models.Slide, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -212,9 +240,10 @@ func findSlideImagesBySlideIDQuiz(slideID string) ([]bson.M, error) {
 	return slideImages, nil
 }
 
-func generateQuizQuestions(contextStr string, slideID string) ([]models.QuizQA, error) {
+func generateQuizQuestions(contextStr string, slideID string, slideImageID string, numOfQ int) ([]models.QuizQA, error) {
+	strNumQ := fmt.Sprintf("%d", numOfQ)
 	PROMPT := fmt.Sprintf(`
-	You are a quiz master. Generate 10 quiz questions from the following content, make the questions relevant, just based on the important topics of the slides, no course admin type questions, and no questions about professor, assume the student does not have access to the slides when completing quiz. Each question should have 4 answer choices and specify the correct answer. Return the response in JUST JSON format array, nothing else.
+	You are a quiz master. Generate %s quiz questions for a student who wants to review the main concepts of the learning objectives from the following content, make the questions relevant, just based on the important topics of the slides, no course admin type questions, and no questions about professor, assume the student does not have access to the slides when completing quiz. Each question should have 4 answer choices and specify the correct answer. Return the response in JUST JSON format array, nothing else. If there are existing questions, generate questions for other parts of the content.
 	example: 
 	"quiz_questions": [
 		{
@@ -227,7 +256,7 @@ func generateQuizQuestions(contextStr string, slideID string) ([]models.QuizQA, 
 	]
 	Content:
 	%s
-	`, contextStr)
+	`, strNumQ, contextStr)
 
 	log.Println("Prompt:", PROMPT)
 
@@ -254,7 +283,7 @@ func generateQuizQuestions(contextStr string, slideID string) ([]models.QuizQA, 
 
 	var questions []models.QuizQA
 	for _, choice := range result.Choices {
-		qas, err := parseQuizQuestions(choice.Message.Content, slideID)
+		qas, err := parseQuizQuestions(choice.Message.Content, slideID, slideImageID)
 		if err != nil {
 			return nil, err
 		}
@@ -264,17 +293,7 @@ func generateQuizQuestions(contextStr string, slideID string) ([]models.QuizQA, 
 	return questions, nil
 }
 
-// func cleanJSONString(jsonString string) string {
-// 	log.Println("Cleaning JSON string")
-// 	pattern := "^```json\\s*(.*?)\\s*```$"
-// 	re := regexp.MustCompile(pattern)
-// 	cleanedString := re.ReplaceAllString(jsonString, "$1")
-
-// 	log.Println("Cleaned JSON string:", cleanedString)
-// 	return cleanedString
-// }
-
-func parseQuizQuestions(content, slideID string) ([]models.QuizQA, error) {
+func parseQuizQuestions(content, slideID, slideImageID string) ([]models.QuizQA, error) {
 	log.Println("Parsing quiz questions")
 	// var questions []models.QuizQA
 
@@ -300,6 +319,7 @@ func parseQuizQuestions(content, slideID string) ([]models.QuizQA, error) {
 	for i := range qq.QuizQuestions {
 		qq.QuizQuestions[i].ID = primitive.NewObjectID()
 		qq.QuizQuestions[i].SlideID = slideID
+		qq.QuizQuestions[i].SlideImageID = slideImageID // Set the SlideImageID
 	}
 
 	return qq.QuizQuestions, nil
@@ -316,4 +336,92 @@ func storeQuizQuestions(questions []models.QuizQA) error {
 
 	_, err := db.DB.Collection("quiz_questions").InsertMany(ctx, docs)
 	return err
+}
+
+func getQuizQuestionsForSlideImage(slideID string, slideImageID string) ([]models.QuizQA, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cursor, err := db.DB.Collection("quiz_questions").Find(ctx, bson.M{"slide_id": slideID, "slide_image_id": slideImageID})
+	if err != nil {
+		return nil, fmt.Errorf("error finding quiz questions: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var questions []models.QuizQA
+	if err = cursor.All(ctx, &questions); err != nil {
+		return nil, fmt.Errorf("error decoding quiz questions: %v", err)
+	}
+	return questions, nil
+}
+
+// Generate quiz questions for a specific slide image
+func GenerateQuizQuestionsForSlideImage(c *gin.Context) {
+	slideID := c.Param("slide_id")
+	slideImageID := c.Param("slide_image_id")
+	log.Println("*** /generate-quiz-questions ***")
+
+	objID, err := primitive.ObjectIDFromHex(slideImageID)
+	if err != nil {
+		log.Println("Error converting slide image ID to ObjectID", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Retrieve slide image
+	slideImage, err := findSlideImageByID(objID)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Println("Found slide image")
+
+	generatedText, ok := slideImage["generated_text"].(string)
+	if !ok || generatedText == "" {
+		log.Println("Generated text not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Generated text not found"})
+		return
+	}
+
+	log.Println("Generated text:", generatedText)
+
+	// Retrieve existing questions for the slide image
+	existingQuestions, err := getQuizQuestionsForSlideImage(slideID, slideImageID)
+	if err != nil {
+		log.Println("Error retrieving existing quiz questions", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Prepare the context string with existing questions
+	contextStr := generatedText
+	if len(existingQuestions) > 0 {
+		contextStr += "\n\nExisting Questions:\n"
+		for _, q := range existingQuestions {
+			contextStr += fmt.Sprintf("Q: %s\nA: %s\n", q.Question, q.Answer)
+		}
+	}
+
+	// Generate quiz questions
+	questions, err := generateQuizQuestions(contextStr, slideID, slideImageID, 3)
+	if err != nil {
+		log.Println("Error generating quiz questions", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Println("Generated questions:", len(questions))
+
+	// Store generated questions in the database
+	if err := storeQuizQuestions(questions); err != nil {
+		log.Println("Error storing quiz questions", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Println("Stored questions in the database")
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": questions})
 }

@@ -64,6 +64,10 @@ func SetUpRoutes(r *gin.Engine) {
 	// generate quiz
 	r.POST("/generate-quiz/:slide_id", GenerateQuizQuestions)
 
+	r.POST("/generate-quiz/:slide_id/:slide_image_id", GenerateQuizQuestionsForSlideImage)
+
+	r.GET("/quiz-questions/:slide_id/:slide_image_id", GetQuizQuestionsForSlideImage)
+
 	// GetSlidesWithQuizQuestions
 	r.GET("/slides-with-quiz-questions", GetSlidesWithQuizQuestions)
 
