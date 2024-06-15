@@ -243,17 +243,22 @@ func findSlideImagesBySlideIDQuiz(slideID string) ([]bson.M, error) {
 func generateQuizQuestions(contextStr string, slideID string, slideImageID string, numOfQ int) ([]models.QuizQA, error) {
 	strNumQ := fmt.Sprintf("%d", numOfQ)
 	PROMPT := fmt.Sprintf(`
-	You are a quiz master. Generate %s quiz questions for a student who wants to review the main concepts of the learning objectives from the following content, make the questions relevant, just based on the important topics of the slides, no course admin type questions, and no questions about professor, assume the student does not have access to the slides when completing quiz. Each question should have 4 answer choices and specify the correct answer. Return the response in JUST JSON format array, nothing else. If there are existing questions, generate questions for other parts of the content.
+	You are a professor. You MUST using Bloom's revised taxonomy, generate %s quiz questions at level 5 (evaluate) for a university student who wants to review the main concepts of the learning objectives from the following content. Ensure the questions are relevant and based on the important topics of the slides, excluding any course administration or professor-related questions. Assume the student does not have access to the slides when completing the quiz. Each question should have 4 answer choices and specify the correct answer. Return the response in JUST JSON format array, nothing else. If there are existing questions, generate questions for other parts of the content. Make sure the answers are clear, 3-4 sentences long, and provide a rationale for the correct answer. Do not include any questions that are too similar to existing questions. Bloom's revised taxonomy, level 5 (evaluate) requires students to make judgments based on criteria and standards.
 	example: 
 	"quiz_questions": [
-		{
-			"question": "What is the capital of France?",
-			"answer_choices": ["Paris", "London", "Berlin", "Madrid"],
-			"answer": "Paris",
-			"slide_id": "slide_id_here",
-			"slide_image_id": "slide_image_id_here"
-		},
-	]
+        {
+            "question": "Assess the effectiveness of France's approach to urban planning in reducing carbon emissions compared to Germany's strategies.",
+            "answer_choices": [
+                "France's approach is more effective due to its focus on public transportation.",
+                "Germany's approach is more effective due to its emphasis on renewable energy.",
+                "Both approaches are equally effective but in different areas.",
+                "Neither approach has been effective in reducing carbon emissions."
+            ],
+            "answer": "France's approach is more effective due to its focus on public transportation.",
+            "slide_id": "slide_id_here",
+            "slide_image_id": "slide_image_id_here"
+        }
+    ]
 	Content:
 	%s
 	`, strNumQ, contextStr)
