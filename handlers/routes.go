@@ -77,6 +77,24 @@ func SetUpRoutes(r *gin.Engine) {
 	// Delete quiz question by quiz id
 	r.DELETE("/quiz-question/:quiz_id", DeleteQuizQuestion)
 
+	// Get all flashcards for a slide
+	r.GET("/generate-flashcards/:slide_id", GenerateFlashCards)
+
+	// Generate flashcards for a slide image
+	r.GET("/generate-flashcards/:slide_id/:slide_image_id", GenerateFlashcardsForSlideImage)
+
+	// Get all flashcards for a slide image
+	r.GET("/flashcards/:slide_id/:slide_image_id", GetFlashcardsForSlideImage)
+
+	// Get all slides with flashcards
+	r.GET("/slides-with-flashcards", GetSlidesWithFlashcards)
+
+	// Get all flashcards for a slide
+	r.GET("/flashcards/:slide_id", GetFlashcards)
+
+	// Delete flashcard by flashcard id
+	r.DELETE("/flashcard/:flashcard_id", DeleteFlashcard)
+
 	// Users
 	userRoutes := r.Group("/user")
 	{
@@ -93,5 +111,17 @@ func SetUpRoutes(r *gin.Engine) {
 			userSpaceRoutes.DELETE("/:space_id", RemoveSpaceFromUser)
 		}
 	}
+
+	// Access codes
+	accessCodeRoutes := r.Group("/access-code")
+	{
+		accessCodeRoutes.POST("/", CreateAccessCode)
+		accessCodeRoutes.GET("/:id", GetAccessCode)
+		accessCodeRoutes.PUT("/:id", UpdateAccessCode)
+		accessCodeRoutes.DELETE("/:id", DeleteAccessCode)
+	}
+
+	// Verify access code
+	r.POST("/verify-access-code", VerifyAccessCode)
 
 }

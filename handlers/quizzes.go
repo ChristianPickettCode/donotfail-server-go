@@ -243,18 +243,19 @@ func findSlideImagesBySlideIDQuiz(slideID string) ([]bson.M, error) {
 func generateQuizQuestions(contextStr string, slideID string, slideImageID string, numOfQ int) ([]models.QuizQA, error) {
 	strNumQ := fmt.Sprintf("%d", numOfQ)
 	PROMPT := fmt.Sprintf(`
-	You are a professor. You MUST using Bloom's revised taxonomy, generate %s quiz questions at level 5 (evaluate) for a university student who wants to review the main concepts of the learning objectives from the following content. Ensure the questions are relevant and based on the important topics of the slides, excluding any course administration or professor-related questions. Assume the student does not have access to the slides when completing the quiz. Each question should have 4 answer choices and specify the correct answer. Return the response in JUST JSON format array, nothing else. If there are existing questions, generate questions for other parts of the content. Make sure the answers are clear, 3-4 sentences long, and provide a rationale for the correct answer. Do not include any questions that are too similar to existing questions. Bloom's revised taxonomy, level 5 (evaluate) requires students to make judgments based on criteria and standards.
+	You are a professor. You MUST using Bloom's revised taxonomy, generate %s quiz questions at level 5 (evaluate) for a university student who wants to review the main concepts of the learning objectives from the following content. Ensure the questions are relevant and based on the important topics of the slides, excluding any course administration or professor-related questions. Assume the student does not have access to the slides when completing the quiz. Each question should have 4 answer choices and specify the correct answer. Return the response in JUST JSON format array, nothing else. If there are existing questions, generate questions for other parts of the content. Make sure the answers are clear, 3-4 sentences long, and provide a rationale for the correct answer. Do not include any questions that are too similar to existing questions. Bloom's revised taxonomy, level 5 (evaluate) requires students to make judgments based on criteria and standards. Sometimes the correct answer is the longest don't let that be the case.
 	example: 
 	"quiz_questions": [
         {
-            "question": "Assess the effectiveness of France's approach to urban planning in reducing carbon emissions compared to Germany's strategies.",
+            "question": "Evaluate the impact of France's urban planning policies on carbon emissions compared to Germany's renewable energy initiatives.",
             "answer_choices": [
-                "France's approach is more effective due to its focus on public transportation.",
-                "Germany's approach is more effective due to its emphasis on renewable energy.",
-                "Both approaches are equally effective but in different areas.",
-                "Neither approach has been effective in reducing carbon emissions."
+                "France's urban planning has significantly reduced emissions by promoting public transportation and reducing car usage.",
+                "Germany's renewable energy initiatives have had a greater impact by increasing the share of renewable energy in the national grid.",
+                "Both countries have seen similar reductions in emissions, but through different policy measures.",
+                "Neither country's policies have effectively reduced carbon emissions, as both still rely heavily on fossil fuels."
             ],
-            "answer": "France's approach is more effective due to its focus on public transportation.",
+            "answer": "France's urban planning has significantly reduced emissions by promoting public transportation and reducing car usage.",
+            "rationale": "France's focus on urban planning, particularly in promoting public transportation, has led to a measurable decrease in car usage and emissions. This approach contrasts with Germany's emphasis on renewable energy, which, while impactful, has not yet achieved the same level of emission reduction.",
             "slide_id": "slide_id_here",
             "slide_image_id": "slide_image_id_here"
         }
@@ -308,11 +309,6 @@ func parseQuizQuestions(content, slideID, slideImageID string) ([]models.QuizQA,
 	}
 
 	var qq QuizQuestions
-
-	// Clean the JSON string
-	// cleanedContent := cleanJSONString(content)
-
-	// parse the JSON string quiz_questions
 
 	// Assuming the content is a JSON string, unmarshal it
 	err := json.Unmarshal([]byte(content), &qq)
