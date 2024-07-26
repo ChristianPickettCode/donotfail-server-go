@@ -29,6 +29,7 @@ func CreateUser(c *gin.Context) {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 	user.SpaceIDs = []string{}
+	user.Credits = 100
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

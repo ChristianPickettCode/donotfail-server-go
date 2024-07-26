@@ -112,6 +112,14 @@ func SetUpRoutes(r *gin.Engine) {
 		}
 	}
 
+	// Credits
+	creditRoutes := r.Group("/credits")
+	{
+		creditRoutes.GET("/:user_id", GetUserCredits)
+		creditRoutes.POST("/:user_id/add/:amount", AddCredits)
+		creditRoutes.POST("/:user_id/remove/:amount", RemoveCredits)
+	}
+
 	// Access codes
 	accessCodeRoutes := r.Group("/access-code")
 	{

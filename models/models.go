@@ -82,6 +82,8 @@ type User struct {
 	UpdatedAt  time.Time          `bson:"updated_at" json:"updated_at"`
 	SpaceIDs   []string           `bson:"space_ids" json:"space_ids"`
 	AccessCode string             `bson:"access_code" json:"access_code"`
+	Credits    int                `bson:"credits" json:"credits"`
+	Plan       string             `bson:"plan" json:"plan"`
 }
 
 type AccessCode struct {
